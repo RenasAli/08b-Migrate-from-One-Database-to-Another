@@ -3,11 +3,22 @@ import sqlConnection from './databases/sqlConnection.js';
 import mongoose from 'mongoose';
 
 dotenv.config();
+const userSchema = new mongoose.Schema({
+  username: String,
+  email: String,
+  password: String,
+});
+
+const adminSchema = new mongoose.Schema({
+  admin_name: String,
+  role: String,
+});
+const User = mongoose.model('User', userSchema);
+const Admin = mongoose.model('Admin', adminSchema);
 
 async function migrateData(){
 
     sqlConnection.connect();
-    
     await mongoose.connect(process.env.MONGODB_URL, {
         useNewUrlParser: true,
         useUnifiedTopology: true
@@ -19,8 +30,8 @@ async function migrateData(){
         const adminData = await queryMySQL(sqlConnection, 'SELECT * FROM admin');
     
         // Transform and insert data into MongoDB
-        await insertData('user', userData);
-        await insertData('admin', adminData);
+        await insertData(User, userData);
+        await insertData(Admin, adminData);
     
         console.log('Data migration completed successfully.');
         
@@ -45,9 +56,14 @@ async function queryMySQL(connection, sqlQuery) {
       });
     });
 }
-async function insertData(collectionName, data) {
-    const Model = mongoose.model(collectionName.charAt(0).toUpperCase() + collectionName.slice(1));
-    await Model.insertMany(data);
+async function insertData(Model, data) {
+  try {
+      await Model.insertMany(data);
+      console.log(`Data inserted successfully into ${Model.modelName} collection.`);
+  } catch (error) {
+      console.log(`Error inserting data into ${Model.modelName} collection: `, error);
+  }
 }
+
 
 migrateData()
